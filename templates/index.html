@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>4K Image Converter</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #e8ebff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 4em;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            color: #667eea;
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .upload-hint {
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .file-info {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f2ff;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .file-info.show {
+            display: block;
+        }
+
+        .file-name {
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 15px 0;
+            display: none;
+        }
+
+        .progress-bar.show {
+            display: block;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        .metadata {
+            margin-top: 15px;
+            padding: 15px;
+            background: #e8f5e9;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .metadata.show {
+            display: block;
+        }
+
+        .metadata-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #c8e6c9;
+        }
+
+        .metadata-item:last-child {
+            border-bottom: none;
+        }
+
+        .metadata-label {
+            font-weight: 600;
+            color: #2e7d32;
+        }
+
+        .metadata-value {
+            color: #558b2f;
+        }
+
+        .download-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: transform 0.2s ease;
+            display: none;
+        }
+
+        .download-btn.show {
+            display: block;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            text-align: center;
+            font-weight: 600;
+            display: none;
+        }
+
+        .success.show {
+            display: block;
+        }
+
+        .reset-btn {
+            width: 100%;
+            padding: 12px;
+            background: #f5f5f5;
+            color: #666;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: all 0.2s ease;
+            display: none;
+        }
+
+        .reset-btn.show {
+            display: block;
+        }
+
+        .reset-btn:hover {
+            background: #eeeeee;
+            border-color: #bbb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖼️ 4K Converter</h1>
+        <p class="subtitle">Convert any image to stunning 4K resolution (3840x2160)</p>
+        
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📤</div>
+            <div class="upload-text">Click to upload or drag & drop</div>
+            <div class="upload-hint">Supports: PNG, JPG, JPEG, WEBP, BMP, TIFF (Max 50MB)</div>
+            <input type="file" id="fileInput" accept="image/*">
+        </div>
+
+        <div class="file-info" id="fileInfo">
+            <div class="file-name" id="fileName">No file selected</div>
+        </div>
+
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <div class="error" id="error"></div>
+        <div class="success" id="success">✅ Image converted successfully!</div>
+
+        <div class="metadata" id="metadata">
+            <div class="metadata-item">
+                <span class="metadata-label">Original Size:</span>
+                <span class="metadata-value" id="originalSize">-</span>
+            </div>
+            <div class="metadata-item">
+                <span class="metadata-label">New Size:</span>
+                <span class="metadata-value" id="newSize">3840x2160</span>
+            </div>
+            <div class="metadata-item">
+                <span class="metadata-label">Original Format:</span>
+                <span class="metadata-value" id="originalFormat">-</span>
+            </div>
+            <div class="metadata-item">
+                <span class="metadata-label">Original Mode:</span>
+                <span class="metadata-value" id="originalMode">-</span>
+            </div>
+        </div>
+
+        <button class="download-btn" id="downloadBtn">⬇️ Download 4K Image</button>
+        <button class="reset-btn" id="resetBtn">🔄 Convert Another Image</button>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const fileName = document.getElementById('fileName');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+        const error = document.getElementById('error');
+        const success = document.getElementById('success');
+        const metadata = document.getElementById('metadata');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        
+        let currentFilename = '';
+
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFile(e.target.files[0]);
+            }
+        });
+
+        // Drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            
+            if (e.dataTransfer.files.length > 0) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+
+        function handleFile(file) {
+            // Hide previous results
+            error.classList.remove('show');
+            success.classList.remove('show');
+            metadata.classList.remove('show');
+            downloadBtn.classList.remove('show');
+            resetBtn.classList.remove('show');
+
+            // Validate file type
+            const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/bmp', 'image/tiff'];
+            if (!allowedTypes.includes(file.type)) {
+                showError('Invalid file type. Please upload a valid image file.');
+                return;
+            }
+
+            // Validate file size (50MB)
+            if (file.size > 50 * 1024 * 1024) {
+                showError('File is too large. Maximum size is 50MB.');
+                return;
+            }
+
+            fileName.textContent = file.name;
+            fileInfo.classList.add('show');
+            
+            uploadFile(file);
+        }
+
+        function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            progressBar.classList.add('show');
+            progressFill.style.width = '50%';
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                progressFill.style.width = '100%';
+                
+                setTimeout(() => {
+                    progressBar.classList.remove('show');
+                    
+                    if (data.error) {
+                        showError(data.error);
+                    } else {
+                        currentFilename = data.filename;
+                        showSuccess(data.metadata);
+                    }
+                }, 500);
+            })
+            .catch(err => {
+                progressBar.classList.remove('show');
+                showError('Upload failed: ' + err.message);
+            });
+        }
+
+        function showError(message) {
+            error.textContent = '❌ ' + message;
+            error.classList.add('show');
+            resetBtn.classList.add('show');
+        }
+
+        function showSuccess(meta) {
+            success.classList.add('show');
+            metadata.classList.add('show');
+            downloadBtn.classList.add('show');
+            resetBtn.classList.add('show');
+
+            document.getElementById('originalSize').textContent = meta.original_size;
+            document.getElementById('newSize').textContent = meta.new_size;
+            document.getElementById('originalFormat').textContent = meta.original_format;
+            document.getElementById('originalMode').textContent = meta.original_mode;
+        }
+
+        downloadBtn.addEventListener('click', () => {
+            window.location.href = `/download/${currentFilename}`;
+        });
+
+        resetBtn.addEventListener('click', () => {
+            fileInput.value = '';
+            fileInfo.classList.remove('show');
+            error.classList.remove('show');
+            success.classList.remove('show');
+            metadata.classList.remove('show');
+            downloadBtn.classList.remove('show');
+            resetBtn.classList.remove('show');
+            progressBar.classList.remove('show');
+            progressFill.style.width = '0%';
+        });
+    </script>
+</body>
+</html>
