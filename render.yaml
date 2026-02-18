@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: image-to-4k-converter
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true

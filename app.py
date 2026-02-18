@@ -53,47 +53,60 @@ def index():
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    if 'file' not in request.files:
-        return jsonify({'error': 'No file provided'}), 400
+    if 'files[]' not in request.files:
+        return jsonify({'error': 'No files provided'}), 400
     
-    file = request.files['file']
+    files = request.files.getlist('files[]')
     
-    if file.filename == '':
-        return jsonify({'error': 'No file selected'}), 400
+    if not files or files[0].filename == '':
+        return jsonify({'error': 'No files selected'}), 400
     
-    if not allowed_file(file.filename):
-        return jsonify({'error': 'Invalid file type. Allowed: PNG, JPG, JPEG, WEBP, BMP, TIFF'}), 400
+    results = []
+    errors = []
     
-    try:
-        # Save uploaded file
-        filename = secure_filename(file.filename)
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        base_name = os.path.splitext(filename)[0]
-        input_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{timestamp}_{filename}")
-        output_filename = f"{base_name}_4K_{timestamp}.jpg"
-        output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
+    for file in files:
+        if not allowed_file(file.filename):
+            errors.append(f'{file.filename}: Invalid file type')
+            continue
         
-        file.save(input_path)
+        try:
+            # Save uploaded file
+            filename = secure_filename(file.filename)
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')[:21]  # Include microseconds for uniqueness
+            base_name = os.path.splitext(filename)[0]
+            input_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{timestamp}_{filename}")
+            output_filename = f"{base_name}_4K_{timestamp}.jpg"
+            output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
+            
+            file.save(input_path)
+            
+            # Process the image
+            metadata = resize_to_4k(input_path, output_path)
+            
+            # Clean up input file
+            os.remove(input_path)
+            
+            results.append({
+                'success': True,
+                'original_name': filename,
+                'filename': output_filename,
+                'metadata': {
+                    'original_size': f"{metadata['size'][0]}x{metadata['size'][1]}",
+                    'new_size': '3840x2160',
+                    'original_format': metadata['format'],
+                    'original_mode': metadata['mode']
+                }
+            })
         
-        # Process the image
-        metadata = resize_to_4k(input_path, output_path)
-        
-        # Clean up input file
-        os.remove(input_path)
-        
-        return jsonify({
-            'success': True,
-            'filename': output_filename,
-            'metadata': {
-                'original_size': f"{metadata['size'][0]}x{metadata['size'][1]}",
-                'new_size': '3840x2160',
-                'original_format': metadata['format'],
-                'original_mode': metadata['mode']
-            }
-        })
+        except Exception as e:
+            errors.append(f'{file.filename}: {str(e)}')
     
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    return jsonify({
+        'results': results,
+        'errors': errors,
+        'total': len(files),
+        'successful': len(results)
+    })
 
 @app.route('/download/<filename>')
 def download_file(filename):
