@@ -4,6 +4,8 @@ import os
 from werkzeug.utils import secure_filename
 import io
 from datetime import datetime
+import shutil
+import zipfile
 
 app = Flask(__name__)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024  # 50MB max file size
@@ -116,6 +118,83 @@ def download_file(filename):
             return send_file(file_path, as_attachment=True)
         else:
             return jsonify({'error': 'File not found'}), 404
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/list-outputs')
+def list_outputs():
+    """List all files in the output folder"""
+    try:
+        files = []
+        if os.path.exists(app.config['OUTPUT_FOLDER']):
+            for filename in os.listdir(app.config['OUTPUT_FOLDER']):
+                file_path = os.path.join(app.config['OUTPUT_FOLDER'], filename)
+                if os.path.isfile(file_path):
+                    file_size = os.path.getsize(file_path)
+                    files.append({
+                        'filename': filename,
+                        'size': file_size,
+                        'size_mb': round(file_size / (1024 * 1024), 2)
+                    })
+        return jsonify({'files': files, 'count': len(files)})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/download-all')
+def download_all():
+    """Download all output files as a zip"""
+    try:
+        if not os.path.exists(app.config['OUTPUT_FOLDER']):
+            return jsonify({'error': 'Output folder not found'}), 404
+        
+        files = [f for f in os.listdir(app.config['OUTPUT_FOLDER']) 
+                if os.path.isfile(os.path.join(app.config['OUTPUT_FOLDER'], f))]
+        
+        if not files:
+            return jsonify({'error': 'No files to download'}), 404
+        
+        # Create zip file in memory
+        memory_file = io.BytesIO()
+        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for filename in files:
+                file_path = os.path.join(app.config['OUTPUT_FOLDER'], filename)
+                zf.write(file_path, filename)
+        
+        memory_file.seek(0)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        
+        return send_file(
+            memory_file,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name=f'4k_images_{timestamp}.zip'
+        )
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/clear-input', methods=['POST'])
+def clear_input():
+    """Clear all files from the input folder"""
+    try:
+        if os.path.exists(app.config['UPLOAD_FOLDER']):
+            for filename in os.listdir(app.config['UPLOAD_FOLDER']):
+                file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+        return jsonify({'success': True, 'message': 'Input folder cleared'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/clear-output', methods=['POST'])
+def clear_output():
+    """Clear all files from the output folder"""
+    try:
+        if os.path.exists(app.config['OUTPUT_FOLDER']):
+            for filename in os.listdir(app.config['OUTPUT_FOLDER']):
+                file_path = os.path.join(app.config['OUTPUT_FOLDER'], filename)
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+        return jsonify({'success': True, 'message': 'Output folder cleared'})
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

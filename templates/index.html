@@ -294,6 +294,99 @@
             margin: 5px 0;
             font-size: 0.9em;
         }
+
+        .management-panel {
+            background: #f8f9ff;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .management-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .button-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .mgmt-btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .mgmt-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .mgmt-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .download-all-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .download-all-btn:hover {
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .clear-input-btn {
+            background: #ff9800;
+            color: white;
+        }
+
+        .clear-input-btn:hover {
+            box-shadow: 0 5px 15px rgba(255, 152, 0, 0.4);
+        }
+
+        .clear-output-btn {
+            background: #f44336;
+            color: white;
+        }
+
+        .clear-output-btn:hover {
+            box-shadow: 0 5px 15px rgba(244, 67, 54, 0.4);
+        }
+
+        .status-message {
+            margin-top: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+            display: none;
+        }
+
+        .status-message.show {
+            display: block;
+        }
+
+        .status-message.success {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-message.error {
+            background: #ffebee;
+            color: #c62828;
+        }
     </style>
 </head>
 <body>
@@ -301,6 +394,22 @@
         <h1>🖼️ 4K Batch Converter</h1>
         <p class="subtitle">Convert multiple images to stunning 4K resolution (3840x2160)</p>
         
+        <div class="management-panel">
+            <div class="management-title">📂 File Management</div>
+            <div class="button-grid">
+                <button class="mgmt-btn download-all-btn" id="downloadAllBtn">
+                    ⬇️ Download All
+                </button>
+                <button class="mgmt-btn clear-input-btn" id="clearInputBtn">
+                    🗑️ Clear Input
+                </button>
+                <button class="mgmt-btn clear-output-btn" id="clearOutputBtn">
+                    🗑️ Clear Output
+                </button>
+            </div>
+            <div class="status-message" id="statusMessage"></div>
+        </div>
+
         <div class="upload-area" id="uploadArea">
             <div class="upload-icon">📤</div>
             <div class="upload-text">Click to upload or drag & drop</div>
@@ -344,6 +453,10 @@
         const resultsStats = document.getElementById('resultsStats');
         const imageGrid = document.getElementById('imageGrid');
         const resetBtn = document.getElementById('resetBtn');
+        const downloadAllBtn = document.getElementById('downloadAllBtn');
+        const clearInputBtn = document.getElementById('clearInputBtn');
+        const clearOutputBtn = document.getElementById('clearOutputBtn');
+        const statusMessage = document.getElementById('statusMessage');
         
         let selectedFilesArray = [];
 
@@ -502,6 +615,102 @@
             errorsList.classList.remove('show');
             progressBar.classList.remove('show');
             progressFill.style.width = '0%';
+        });
+
+        // Management panel functions
+        function showStatusMessage(message, isSuccess) {
+            statusMessage.textContent = message;
+            statusMessage.className = 'status-message show ' + (isSuccess ? 'success' : 'error');
+            setTimeout(() => {
+                statusMessage.classList.remove('show');
+            }, 3000);
+        }
+
+        downloadAllBtn.addEventListener('click', () => {
+            downloadAllBtn.disabled = true;
+            downloadAllBtn.textContent = '⏳ Preparing...';
+            
+            fetch('/download-all')
+                .then(response => {
+                    if (!response.ok) {
+                        return response.json().then(err => { throw new Error(err.error); });
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+                    a.download = `4k_images_${timestamp}.zip`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    showStatusMessage('✅ All files downloaded successfully!', true);
+                    downloadAllBtn.disabled = false;
+                    downloadAllBtn.textContent = '⬇️ Download All';
+                })
+                .catch(err => {
+                    showStatusMessage('❌ ' + err.message, false);
+                    downloadAllBtn.disabled = false;
+                    downloadAllBtn.textContent = '⬇️ Download All';
+                });
+        });
+
+        clearInputBtn.addEventListener('click', () => {
+            if (!confirm('⚠️ Are you sure you want to clear the input folder? This action cannot be undone.')) {
+                return;
+            }
+
+            clearInputBtn.disabled = true;
+            clearInputBtn.textContent = '⏳ Clearing...';
+
+            fetch('/clear-input', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showStatusMessage('✅ Input folder cleared successfully!', true);
+                    } else {
+                        showStatusMessage('❌ ' + (data.error || 'Failed to clear input folder'), false);
+                    }
+                    clearInputBtn.disabled = false;
+                    clearInputBtn.textContent = '🗑️ Clear Input';
+                })
+                .catch(err => {
+                    showStatusMessage('❌ Error: ' + err.message, false);
+                    clearInputBtn.disabled = false;
+                    clearInputBtn.textContent = '🗑️ Clear Input';
+                });
+        });
+
+        clearOutputBtn.addEventListener('click', () => {
+            if (!confirm('⚠️ Are you sure you want to clear the output folder? All converted images will be deleted. This action cannot be undone.')) {
+                return;
+            }
+
+            clearOutputBtn.disabled = true;
+            clearOutputBtn.textContent = '⏳ Clearing...';
+
+            fetch('/clear-output', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showStatusMessage('✅ Output folder cleared successfully!', true);
+                        // Also clear the results display
+                        results.classList.remove('show');
+                    } else {
+                        showStatusMessage('❌ ' + (data.error || 'Failed to clear output folder'), false);
+                    }
+                    clearOutputBtn.disabled = false;
+                    clearOutputBtn.textContent = '🗑️ Clear Output';
+                })
+                .catch(err => {
+                    showStatusMessage('❌ Error: ' + err.message, false);
+                    clearOutputBtn.disabled = false;
+                    clearOutputBtn.textContent = '🗑️ Clear Output';
+                });
         });
     </script>
 </body>

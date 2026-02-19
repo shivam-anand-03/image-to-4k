@@ -9,6 +9,7 @@ services:
     volumes:
       - ./uploads:/app/uploads
       - ./outputs:/app/outputs
+      - ./input:/app/input
     environment:
       - FLASK_ENV=production
     restart: unless-stopped

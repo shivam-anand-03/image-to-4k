@@ -24,8 +24,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY app.py .
 COPY templates/ templates/
 
-# Create directories for uploads and outputs
-RUN mkdir -p uploads outputs
+# Create directories for uploads, outputs, and input
+RUN mkdir -p uploads outputs input
 
 # Expose port
 EXPOSE 5000
