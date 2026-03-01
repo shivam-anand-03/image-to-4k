@@ -55,17 +55,18 @@ def index():
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    if 'files[]' not in request.files:
-        return jsonify({'error': 'No files provided'}), 400
-    
-    files = request.files.getlist('files[]')
-    tool_name = request.form.get('toolName', '').strip()
-    
-    if not files or files[0].filename == '':
-        return jsonify({'error': 'No files selected'}), 400
-    
-    results = []
-    errors = []
+    try:
+        if 'files[]' not in request.files:
+            return jsonify({'error': 'No files provided'}), 400
+        
+        files = request.files.getlist('files[]')
+        tool_name = request.form.get('toolName', '').strip()
+        
+        if not files or files[0].filename == '':
+            return jsonify({'error': 'No files selected'}), 400
+        
+        results = []
+        errors = []
     
     for index, file in enumerate(files, start=1):
         if not allowed_file(file.filename):
@@ -113,14 +114,17 @@ def upload_file():
         
         except Exception as e:
             errors.append(f'{file.filename}: {str(e)}')
+        
+        return jsonify({
+            'results': results,
+            'errors': errors,
+            'total': len(files),
+            'successful': len(results),
+            'tool_name': tool_name
+        })
     
-    return jsonify({
-        'results': results,
-        'errors': errors,
-        'total': len(files),
-        'successful': len(results),
-        'tool_name': tool_name
-    })
+    except Exception as e:
+        return jsonify({'error': f'Server error: {str(e)}', 'results': [], 'errors': [str(e)], 'total': 0, 'successful': 0}), 500
 
 @app.route('/download/<filename>')
 def download_file(filename):
