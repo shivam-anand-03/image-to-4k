@@ -67,53 +67,53 @@ def upload_file():
         
         results = []
         errors = []
-    
-    for index, file in enumerate(files, start=1):
-        if not allowed_file(file.filename):
-            errors.append(f'{file.filename}: Invalid file type')
-            continue
         
-        try:
-            # Save uploaded file
-            filename = secure_filename(file.filename)
-            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')[:21]  # Include microseconds for uniqueness
-            input_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{timestamp}_{filename}")
+        for index, file in enumerate(files, start=1):
+            if not allowed_file(file.filename):
+                errors.append(f'{file.filename}: Invalid file type')
+                continue
             
-            # Generate output filename based on tool name
-            if tool_name:
-                # Use tool name with sequential numbering: toolname_image_001.jpg, toolname_image_002.jpg, etc.
-                safe_tool_name = secure_filename(tool_name).replace(' ', '_')
-                output_filename = f"{safe_tool_name}_image_{index:03d}.jpg"
-            else:
-                # Use original behavior with base name
-                base_name = os.path.splitext(filename)[0]
-                output_filename = f"{base_name}_4K_{timestamp}.jpg"
+            try:
+                # Save uploaded file
+                filename = secure_filename(file.filename)
+                timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')[:21]  # Include microseconds for uniqueness
+                input_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{timestamp}_{filename}")
+                
+                # Generate output filename based on tool name
+                if tool_name:
+                    # Use tool name with sequential numbering: toolname_image_001.jpg, toolname_image_002.jpg, etc.
+                    safe_tool_name = secure_filename(tool_name).replace(' ', '_')
+                    output_filename = f"{safe_tool_name}_image_{index:03d}.jpg"
+                else:
+                    # Use original behavior with base name
+                    base_name = os.path.splitext(filename)[0]
+                    output_filename = f"{base_name}_4K_{timestamp}.jpg"
+                
+                output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
+                
+                file.save(input_path)
+                
+                # Process the image
+                metadata = resize_to_4k(input_path, output_path)
+                
+                # Clean up input file
+                os.remove(input_path)
+                
+                results.append({
+                    'success': True,
+                    'original_name': filename,
+                    'filename': output_filename,
+                    'index': index,
+                    'metadata': {
+                        'original_size': f"{metadata['size'][0]}x{metadata['size'][1]}",
+                        'new_size': '3840x2160',
+                        'original_format': metadata['format'],
+                        'original_mode': metadata['mode']
+                    }
+                })
             
-            output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
-            
-            file.save(input_path)
-            
-            # Process the image
-            metadata = resize_to_4k(input_path, output_path)
-            
-            # Clean up input file
-            os.remove(input_path)
-            
-            results.append({
-                'success': True,
-                'original_name': filename,
-                'filename': output_filename,
-                'index': index,
-                'metadata': {
-                    'original_size': f"{metadata['size'][0]}x{metadata['size'][1]}",
-                    'new_size': '3840x2160',
-                    'original_format': metadata['format'],
-                    'original_mode': metadata['mode']
-                }
-            })
-        
-        except Exception as e:
-            errors.append(f'{file.filename}: {str(e)}')
+            except Exception as e:
+                errors.append(f'{file.filename}: {str(e)}')
         
         return jsonify({
             'results': results,
