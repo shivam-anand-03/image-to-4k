@@ -197,6 +197,31 @@
             margin-top: 5px;
         }
 
+        .download-all-results-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 20px;
+            transition: transform 0.2s ease;
+        }
+
+        .download-all-results-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(76, 175, 80, 0.4);
+        }
+
+        .download-all-results-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .image-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
@@ -293,6 +318,53 @@
             border-radius: 5px;
             margin: 5px 0;
             font-size: 0.9em;
+        }
+
+        .tool-name-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9ff;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .tool-name-section.show {
+            display: block;
+        }
+
+        .tool-name-label {
+            display: block;
+            color: #667eea;
+            font-weight: 600;
+            margin-bottom: 10px;
+            font-size: 1.05em;
+        }
+
+        .tool-name-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        .tool-name-input:focus {
+            outline: none;
+            border-color: #764ba2;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .tool-name-hint {
+            margin-top: 8px;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        #namePreview {
+            color: #667eea;
+            font-weight: 600;
         }
 
         .management-panel {
@@ -417,6 +489,12 @@
             <input type="file" id="fileInput" accept="image/*" multiple>
         </div>
 
+        <div class="tool-name-section" id="toolNameSection">
+            <label for="toolNameInput" class="tool-name-label">📝 Tool/Project Name (Optional)</label>
+            <input type="text" id="toolNameInput" class="tool-name-input" placeholder="e.g., azure, perplexity, myproject">
+            <div class="tool-name-hint">Files will be named as: <span id="namePreview">toolname_image_001.jpg, toolname_image_002.jpg...</span></div>
+        </div>
+
         <div class="selected-files" id="selectedFiles">
             <div class="selected-count" id="selectedCount">0 files selected</div>
             <div class="file-list" id="fileList"></div>
@@ -434,6 +512,9 @@
                 <div class="results-title">✅ Conversion Complete!</div>
                 <div class="results-stats" id="resultsStats"></div>
             </div>
+            <button class="download-all-results-btn" id="downloadAllResultsBtn" onclick="window.location.href='/download-all'">
+                📦 Download All Images as ZIP
+            </button>
             <div class="image-grid" id="imageGrid"></div>
             <button class="reset-btn" id="resetBtn">🔄 Convert More Images</button>
         </div>
@@ -442,6 +523,9 @@
     <script>
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
+        const toolNameSection = document.getElementById('toolNameSection');
+        const toolNameInput = document.getElementById('toolNameInput');
+        const namePreview = document.getElementById('namePreview');
         const selectedFiles = document.getElementById('selectedFiles');
         const selectedCount = document.getElementById('selectedCount');
         const fileList = document.getElementById('fileList');
@@ -459,6 +543,17 @@
         const statusMessage = document.getElementById('statusMessage');
         
         let selectedFilesArray = [];
+
+        // Update name preview when tool name changes
+        toolNameInput.addEventListener('input', (e) => {
+            const value = e.target.value.trim();
+            if (value) {
+                const safeName = value.replace(/[^a-zA-Z0-9_-]/g, '_');
+                namePreview.textContent = `${safeName}_image_001.jpg, ${safeName}_image_002.jpg, ${safeName}_image_003.jpg...`;
+            } else {
+                namePreview.textContent = 'originalname_4K_timestamp.jpg';
+            }
+        });
 
         uploadArea.addEventListener('click', () => fileInput.click());
 
@@ -514,6 +609,7 @@
                 fileList.appendChild(fileItem);
             });
 
+            toolNameSection.classList.add('show');
             selectedFiles.classList.add('show');
             results.classList.remove('show');
             errorsList.classList.remove('show');
@@ -532,6 +628,12 @@
             selectedFilesArray.forEach(file => {
                 formData.append('files[]', file);
             });
+            
+            // Add tool name if provided
+            const toolName = toolNameInput.value.trim();
+            if (toolName) {
+                formData.append('toolName', toolName);
+            }
 
             progressBar.classList.add('show');
             progressFill.style.width = '50%';
@@ -609,12 +711,15 @@
 
         resetBtn.addEventListener('click', () => {
             fileInput.value = '';
+            toolNameInput.value = '';
             selectedFilesArray = [];
+            toolNameSection.classList.remove('show');
             selectedFiles.classList.remove('show');
             results.classList.remove('show');
             errorsList.classList.remove('show');
             progressBar.classList.remove('show');
             progressFill.style.width = '0%';
+            namePreview.textContent = 'toolname_image_001.jpg, toolname_image_002.jpg...';
         });
 
         // Management panel functions

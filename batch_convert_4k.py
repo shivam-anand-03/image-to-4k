@@ -2,10 +2,17 @@
 """
 Batch convert all images from input folder to 4K resolution (3840x2160)
 and save them to the outputs folder.
+
+Usage:
+    python batch_convert_4k.py [tool_name]
+    
+    If tool_name is provided, outputs will be named: toolname_001.jpg, toolname_002.jpg, etc.
+    Otherwise, outputs will be named: 001.jpg, 002.jpg, etc.
 """
 
 from PIL import Image
 import os
+import sys
 from pathlib import Path
 
 # Supported image formats
@@ -40,8 +47,12 @@ def resize_to_4k(image_path, output_path):
         print(f"  ✗ Error processing {image_path.name}: {str(e)}")
         return False
 
-def batch_convert():
-    """Convert all images from input folder to 4K"""
+def batch_convert(tool_name=None):
+    """Convert all images from input folder to 4K
+    
+    Args:
+        tool_name: Optional tool/project name for output files
+    """
     # Set up directories
     input_dir = Path('input')
     output_dir = Path('outputs')
@@ -61,15 +72,25 @@ def batch_convert():
         print(f"Supported formats: {', '.join(ALLOWED_EXTENSIONS)}")
         return
     
-    print(f"Found {len(image_files)} image(s) to process\n")
+    print(f"Found {len(image_files)} image(s) to process")
+    if tool_name:
+        print(f"Tool name: {tool_name}")
+        print(f"Output format: {tool_name}_image_001.jpg, {tool_name}_image_002.jpg, etc.\n")
+    else:
+        print("Output format: 001.jpg, 002.jpg, etc.\n")
     print("=" * 60)
     
     successful = 0
     failed = 0
     
     for index, image_file in enumerate(image_files, start=1):
-        # Create output filename with sequential numbering
-        output_filename = f'{index}.jpg'
+        # Create output filename with sequential numbering (3-digit zero-padded)
+        if tool_name:
+            # Sanitize tool name
+            safe_tool_name = tool_name.replace(' ', '_').replace('/', '_').replace('\\', '_')
+            output_filename = f'{safe_tool_name}_image_{index:03d}.jpg'
+        else:
+            output_filename = f'{index:03d}.jpg'
         output_path = output_dir / output_filename
         
         if resize_to_4k(image_file, output_path):
@@ -87,4 +108,6 @@ def batch_convert():
     print(f"\nOutput location: {output_dir.absolute()}")
 
 if __name__ == '__main__':
-    batch_convert()
+    # Get tool name from command line argument if provided
+    tool_name = sys.argv[1] if len(sys.argv) > 1 else None
+    batch_convert(tool_name)

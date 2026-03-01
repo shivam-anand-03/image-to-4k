@@ -59,6 +59,7 @@ def upload_file():
         return jsonify({'error': 'No files provided'}), 400
     
     files = request.files.getlist('files[]')
+    tool_name = request.form.get('toolName', '').strip()
     
     if not files or files[0].filename == '':
         return jsonify({'error': 'No files selected'}), 400
@@ -66,7 +67,7 @@ def upload_file():
     results = []
     errors = []
     
-    for file in files:
+    for index, file in enumerate(files, start=1):
         if not allowed_file(file.filename):
             errors.append(f'{file.filename}: Invalid file type')
             continue
@@ -75,9 +76,18 @@ def upload_file():
             # Save uploaded file
             filename = secure_filename(file.filename)
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')[:21]  # Include microseconds for uniqueness
-            base_name = os.path.splitext(filename)[0]
             input_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{timestamp}_{filename}")
-            output_filename = f"{base_name}_4K_{timestamp}.jpg"
+            
+            # Generate output filename based on tool name
+            if tool_name:
+                # Use tool name with sequential numbering: toolname_image_001.jpg, toolname_image_002.jpg, etc.
+                safe_tool_name = secure_filename(tool_name).replace(' ', '_')
+                output_filename = f"{safe_tool_name}_image_{index:03d}.jpg"
+            else:
+                # Use original behavior with base name
+                base_name = os.path.splitext(filename)[0]
+                output_filename = f"{base_name}_4K_{timestamp}.jpg"
+            
             output_path = os.path.join(app.config['OUTPUT_FOLDER'], output_filename)
             
             file.save(input_path)
@@ -92,6 +102,7 @@ def upload_file():
                 'success': True,
                 'original_name': filename,
                 'filename': output_filename,
+                'index': index,
                 'metadata': {
                     'original_size': f"{metadata['size'][0]}x{metadata['size'][1]}",
                     'new_size': '3840x2160',
@@ -107,7 +118,8 @@ def upload_file():
         'results': results,
         'errors': errors,
         'total': len(files),
-        'successful': len(results)
+        'successful': len(results),
+        'tool_name': tool_name
     })
 
 @app.route('/download/<filename>')
